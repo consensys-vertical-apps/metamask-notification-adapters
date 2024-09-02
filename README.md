@@ -1,0 +1,1 @@
+# metamask-notification-adapters
