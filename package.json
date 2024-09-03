@@ -1,0 +1,20 @@
+{
+    "name": "metamask-notification-adapters",
+    "type": "module",
+    "scripts": {
+        "lint": "biome lint --apply ./src ./*.json",
+        "format": "biome format --write ./src ./*.json",
+        "check": "biome check --apply ./src ./*.json && bun run typecheck",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.7.1",
+        "@types/bun": "latest"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "viem": "^2.19.4"
+    }
+}
