@@ -1,10 +1,10 @@
-import * as test_is_matching from "#/adapters/test/is_matching";
-import * as test_is_not_matching from "#/adapters/test/is_not_matching";
-import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
+import type * as viem from "viem";
 import * as test_is_active_user from "#/adapters/test/is_active_user";
+import * as test_is_matching from "#/adapters/test/is_matching";
+import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
+import * as test_is_not_matching from "#/adapters/test/is_not_matching";
 import * as test_is_not_supported_chain from "#/adapters/test/is_not_supported_chain";
 import * as domain from "#/domain";
-import type * as viem from "viem";
 
 export const CONTRACT_ADAPTERS: ContractAdapters = {
     // Test adapters
@@ -79,4 +79,9 @@ export class NotSupportedChainError extends Error {
     toJSON(): string {
         return this.message;
     }
+}
+
+export function hash(data: Bun.BlobOrStringOrBuffer): string {
+    const hasher = new Bun.CryptoHasher("md5");
+    return hasher.update(data).digest("hex");
 }
