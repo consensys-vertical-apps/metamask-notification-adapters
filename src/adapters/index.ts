@@ -1,4 +1,5 @@
 import type * as viem from "viem";
+import * as aave_v3_health_factor from "#/adapters/aave/aave_v3_health_factor";
 import * as test_is_active_user from "#/adapters/test/is_active_user";
 import * as test_is_matching from "#/adapters/test/is_matching";
 import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
@@ -7,6 +8,9 @@ import * as test_is_not_supported_chain from "#/adapters/test/is_not_supported_c
 import * as domain from "#/domain";
 
 export const CONTRACT_ADAPTERS: ContractAdapters = {
+    // Actual adapters
+    [domain.Kind.AaveV3HealthFactor]: new aave_v3_health_factor.Adapter(),
+
     // Test adapters
     [domain.Kind.TestIsMatching]: new test_is_matching.Adapter(),
     [domain.Kind.TestIsNotMatching]: new test_is_not_matching.Adapter(),
