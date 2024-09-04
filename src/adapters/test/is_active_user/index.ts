@@ -1,6 +1,6 @@
+import type * as viem from "viem";
 import type * as adapters from "#/adapters";
 import type * as domain from "#/domain";
-import type * as viem from "viem";
 
 type UserSettings = {
     value: string;
