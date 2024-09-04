@@ -1,7 +1,7 @@
 import * as t from "bun:test";
 import * as uuid from "uuid";
 import * as adapters from "#/adapters";
-import * as aave_v3_health_factor from "#/adapters/aave/aave_v3_health_factor";
+import * as aave_v3_health_factor from "#/adapters/aave/v3_health_factor";
 import * as domain from "#/domain";
 import * as testutils from "#/testutils";
 
