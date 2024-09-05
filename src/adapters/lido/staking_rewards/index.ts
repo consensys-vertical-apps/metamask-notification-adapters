@@ -36,13 +36,13 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     private readonly STETH_TRANSFER_EVENT = viem.parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 
     // Checks if a user is eligible for Lido staking rewards notifications
-    public async checkUser(address: viem.Address, chainId: domain.Chain, publicClient: viem.PublicClient): Promise<adapters.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<adapters.UserCheckResult<UserSettings>> {
         if (chainId !== domain.Chain.Ethereum) {
             return { active: false, error: new adapters.NotSupportedChainError() };
         }
 
         // Fetch the user's stETH balance
-        const balance = await publicClient.readContract({
+        const balance = await client.readContract({
             address: this.STETH_TOKEN_ADDRESS,
             abi: this.STETH_ABI,
             functionName: "balanceOf",
@@ -59,17 +59,17 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Matches the trigger conditions and updates the state
-    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, publicClient: viem.PublicClient): Promise<adapters.MatchResult<State, Context>> {
-        const currentStethBalance = await this.getStethBalance(publicClient, trigger.address);
+    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<adapters.MatchResult<State, Context>> {
+        const currentStethBalance = await this.getStethBalance(client, trigger.address);
 
         // Check if the user is active (balance above dust threshold)
         if (currentStethBalance <= this.STETH_DUST_THRESHOLD) {
             return { matched: false, error: new adapters.NotActiveUserError() };
         }
 
-        const currentBlockNumber = await publicClient.getBlockNumber();
+        const currentBlockNumber = await client.getBlockNumber();
         const currentTimestamp = Math.floor(Date.now() / 1000);
-        const currentExchangeRate = await this.getStethExchangeRate(publicClient, currentBlockNumber);
+        const currentExchangeRate = await this.getStethExchangeRate(client, currentBlockNumber);
         const currentEthValue = (currentStethBalance * currentExchangeRate) / BigInt(1e18);
 
         // Initialize state if it's the first run
@@ -89,8 +89,8 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         // Track deposits and withdrawals
         const [deposits, withdrawals] = await Promise.all([
-            this.trackDeposits(publicClient, trigger.address, trigger.state.lastBlockNumber + 1n, currentBlockNumber),
-            this.trackWithdrawals(publicClient, trigger.address, trigger.state.lastBlockNumber + 1n, currentBlockNumber),
+            this.trackDeposits(client, trigger.address, trigger.state.lastBlockNumber + 1n, currentBlockNumber),
+            this.trackWithdrawals(client, trigger.address, trigger.state.lastBlockNumber + 1n, currentBlockNumber),
         ]);
 
         const totalDeposits = trigger.state.deposits + deposits;
@@ -154,8 +154,8 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Retrieves the stETH balance for a given address
-    private async getStethBalance(publicClient: viem.PublicClient, address: viem.Address, blockNumber?: bigint): Promise<bigint> {
-        return publicClient.readContract({
+    private async getStethBalance(client: viem.PublicClient, address: viem.Address, blockNumber?: bigint): Promise<bigint> {
+        return client.readContract({
             address: this.STETH_TOKEN_ADDRESS,
             abi: this.STETH_ABI,
             functionName: "balanceOf",
@@ -165,9 +165,9 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Retrieves the current ETH/stETH exchange rate
-    private async getStethExchangeRate(publicClient: viem.PublicClient, blockNumber: bigint): Promise<bigint> {
+    private async getStethExchangeRate(client: viem.PublicClient, blockNumber: bigint): Promise<bigint> {
         const oneShare = BigInt(1e18);
-        return publicClient.readContract({
+        return client.readContract({
             address: this.STETH_TOKEN_ADDRESS,
             abi: this.STETH_ABI,
             functionName: "getPooledEthByShares",
@@ -177,8 +177,8 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Tracks deposits (incoming transfers) and calculates their ETH value
-    private async trackDeposits(publicClient: viem.PublicClient, address: viem.Address, fromBlock: bigint, toBlock: bigint): Promise<bigint> {
-        const logs = await publicClient.getLogs({
+    private async trackDeposits(client: viem.PublicClient, address: viem.Address, fromBlock: bigint, toBlock: bigint): Promise<bigint> {
+        const logs = await client.getLogs({
             address: this.STETH_TOKEN_ADDRESS,
             event: this.STETH_TRANSFER_EVENT,
             args: { to: address },
@@ -188,7 +188,7 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         let deposits = BigInt(0);
         for (const log of logs) {
-            const rate = await this.getStethExchangeRate(publicClient, log.blockNumber);
+            const rate = await this.getStethExchangeRate(client, log.blockNumber);
             deposits += ((log.args.value as bigint) * rate) / BigInt(1e18);
         }
 
@@ -196,8 +196,8 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Tracks withdrawals (outgoing transfers) and calculates their ETH value
-    private async trackWithdrawals(publicClient: viem.PublicClient, address: viem.Address, fromBlock: bigint, toBlock: bigint): Promise<bigint> {
-        const logs = await publicClient.getLogs({
+    private async trackWithdrawals(client: viem.PublicClient, address: viem.Address, fromBlock: bigint, toBlock: bigint): Promise<bigint> {
+        const logs = await client.getLogs({
             address: this.STETH_TOKEN_ADDRESS,
             event: this.STETH_TRANSFER_EVENT,
             args: { from: address },
@@ -207,7 +207,7 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         let withdrawals = BigInt(0);
         for (const log of logs) {
-            const rate = await this.getStethExchangeRate(publicClient, log.blockNumber);
+            const rate = await this.getStethExchangeRate(client, log.blockNumber);
             withdrawals += ((log.args.value as bigint) * rate) / BigInt(1e18);
         }
 
