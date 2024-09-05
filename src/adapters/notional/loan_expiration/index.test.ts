@@ -1,8 +1,9 @@
 import * as t from "bun:test";
 import * as uuid from "uuid";
 import * as viem from "viem";
-import * as adapters from "#/adapters";
+import * as errors from "#/adapters/errors";
 import * as notional_loan_expiration from "#/adapters/notional/loan_expiration";
+import * as utils from "#/adapters/utils";
 import * as domain from "#/domain";
 import * as testutils from "#/testutils";
 
@@ -27,7 +28,7 @@ t.describe("notional_loan_expiration adapter", () => {
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
             const result = await adapter.checkUser(trigger.address, domain.Chain.None, client);
-            t.expect(result).toEqual({ active: false, error: new adapters.NotSupportedChainError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
@@ -59,7 +60,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
 
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -78,7 +79,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
 
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -97,7 +98,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
 
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -126,7 +127,7 @@ t.describe("notional_loan_expiration adapter", () => {
         t.test("should error when chain is not supported", async () => {
             const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotSupportedChainError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
@@ -158,7 +159,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.matchTrigger(trigger, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -177,7 +178,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.matchTrigger(trigger, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -196,7 +197,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.matchTrigger(trigger, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -215,7 +216,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const result = await adapter.matchTrigger(trigger, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -257,7 +258,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             t.expect(result).toEqual({
                 matched: true,
-                dedupKey: adapters.hash(64762116923627733193802365266767621221483210159693794380068657886677035590578n.toString()),
+                dedupKey: utils.hash(64762116923627733193802365266767621221483210159693794380068657886677035590578n.toString()),
                 context: {
                     loans: [
                         {
@@ -298,7 +299,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 // Only to make TS happy
                 throw new Error("Should be matched");
             }
-            t.expect(result?.dedupKey).toEqual(adapters.hash([8910n, 1234n, 4567n].map((value) => value.toString()).join("-")));
+            t.expect(result?.dedupKey).toEqual(utils.hash([8910n, 1234n, 4567n].map((value) => value.toString()).join("-")));
             t.expect(result?.context.loans.map((value) => value.storageSlot)).toEqual([8910n, 1234n, 4567n]);
 
             readContract.mockRestore();

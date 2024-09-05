@@ -1,5 +1,7 @@
 import * as viem from "viem";
-import * as adapters from "#/adapters";
+import * as errors from "#/adapters/errors";
+import type * as types from "#/adapters/types";
+import * as utils from "#/adapters/utils";
 import * as domain from "#/domain";
 
 export type UserSettings = {
@@ -21,7 +23,7 @@ type Loan = {
 
 type Assets = Record<string, { symbol: string; dustThreshold: bigint }>;
 
-export class Adapter implements adapters.IContractAdapter<UserSettings, State, Context> {
+export class Adapter implements types.IContractAdapter<UserSettings, State, Context> {
     private readonly DEFAULT_REMINDER_DELAY_IN_SECONDS = 7 * 24 * 60 * 60; // 1 week
 
     private readonly ROUTER_ADDRESSES: Partial<Record<domain.Chain, viem.Address>> = {
@@ -46,10 +48,10 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     };
 
     // Check if the user has at least one active loan
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<adapters.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
         const routerAddresss = this.ROUTER_ADDRESSES[chainId];
         if (!routerAddresss) {
-            return { active: false, error: new adapters.NotSupportedChainError() };
+            return { active: false, error: new errors.NotSupportedChainError() };
         }
 
         // Get all user's positions
@@ -81,16 +83,16 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         // if the user doesn't have at least one active loan
         if (!hasAtLeastOneLoan) {
-            return { active: false, error: new adapters.NotActiveUserError() };
+            return { active: false, error: new errors.NotActiveUserError() };
         }
 
         return { active: true, userSettings: { reminderDelayInSeconds: this.DEFAULT_REMINDER_DELAY_IN_SECONDS } };
     }
 
-    public async matchTrigger(trigger: domain.Trigger<UserSettings>, client: viem.PublicClient): Promise<adapters.MatchResult<State, Context>> {
+    public async matchTrigger(trigger: domain.Trigger<UserSettings>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
         const routerAddresss = this.ROUTER_ADDRESSES[trigger.chainId];
         if (!routerAddresss) {
-            return { matched: false, error: new adapters.NotSupportedChainError() };
+            return { matched: false, error: new errors.NotSupportedChainError() };
         }
 
         // Get all user's positions
@@ -126,7 +128,7 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         // if the user doesn't have at least one active loan
         if (loans.length === 0) {
-            return { matched: false, error: new adapters.NotActiveUserError() };
+            return { matched: false, error: new errors.NotActiveUserError() };
         }
 
         // get the loans that will expire before the reminder
@@ -158,6 +160,6 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     private makeDedupKey(loans: Loan[]): string {
         const sorted = loans.sort((a, b) => b.maturityDateInSecs - a.maturityDateInSecs);
         const joined = sorted.map((loan) => loan.storageSlot.toString()).join("-");
-        return adapters.hash(joined);
+        return utils.hash(joined);
     }
 }
