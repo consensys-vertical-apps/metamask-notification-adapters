@@ -4,6 +4,7 @@ import * as ens_expiration from "#/adapters/ens/expiration";
 import * as lido_staking_rewards from "#/adapters/lido/staking_rewards";
 import * as notional_loan_expiration from "#/adapters/notional/loan_expiration";
 import * as rocketpool_staking_rewards from "#/adapters/rocketpool/staking_rewards";
+import * as spark_fi_health_factor from "#/adapters/spark_fi/health_factor";
 import * as test_is_active_user from "#/adapters/test/is_active_user";
 import * as test_is_matching from "#/adapters/test/is_matching";
 import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
@@ -18,6 +19,7 @@ export const CONTRACT_ADAPTERS: ContractAdapters = {
     [domain.Kind.LidoStakingRewards]: new lido_staking_rewards.Adapter(),
     [domain.Kind.NotionalLoanExpiration]: new notional_loan_expiration.Adapter(),
     [domain.Kind.RocketpoolStakingRewards]: new rocketpool_staking_rewards.Adapter(),
+    [domain.Kind.SparkFiHealthFactor]: new spark_fi_health_factor.Adapter(),
 
     // Test adapters
     [domain.Kind.TestIsMatching]: new test_is_matching.Adapter(),
