@@ -9,12 +9,15 @@
     },
     "devDependencies": {
         "@biomejs/biome": "1.7.1",
-        "@types/bun": "latest"
+        "@types/bun": "latest",
+        "@types/uuid": "^10.0.0"
     },
     "peerDependencies": {
         "typescript": "^5.0.0"
     },
     "dependencies": {
-        "viem": "^2.19.4"
+        "uuid": "^10.0.0",
+        "viem": "^2.19.4",
+        "zod": "^3.23.8"
     }
 }

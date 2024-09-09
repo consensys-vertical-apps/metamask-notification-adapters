@@ -1,12 +1,26 @@
-import * as test_is_matching from "#/adapters/test/is_matching";
-import * as test_is_not_matching from "#/adapters/test/is_not_matching";
-import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
+import type * as viem from "viem";
+import * as aave_v3_health_factor from "#/adapters/aave/v3_health_factor";
+import * as ens_expiration from "#/adapters/ens/expiration";
+import * as lido_staking_rewards from "#/adapters/lido/staking_rewards";
+import * as notional_loan_expiration from "#/adapters/notional/loan_expiration";
+import * as rocketpool_staking_rewards from "#/adapters/rocketpool/staking_rewards";
+import * as spark_fi_health_factor from "#/adapters/spark_fi/health_factor";
 import * as test_is_active_user from "#/adapters/test/is_active_user";
+import * as test_is_matching from "#/adapters/test/is_matching";
+import * as test_is_not_active_user from "#/adapters/test/is_not_active_user";
+import * as test_is_not_matching from "#/adapters/test/is_not_matching";
 import * as test_is_not_supported_chain from "#/adapters/test/is_not_supported_chain";
 import * as domain from "#/domain";
-import type * as viem from "viem";
 
 export const CONTRACT_ADAPTERS: ContractAdapters = {
+    // Actual adapters
+    [domain.Kind.AaveV3HealthFactor]: new aave_v3_health_factor.Adapter(),
+    [domain.Kind.EnsExpiration]: new ens_expiration.Adapter(),
+    [domain.Kind.LidoStakingRewards]: new lido_staking_rewards.Adapter(),
+    [domain.Kind.NotionalLoanExpiration]: new notional_loan_expiration.Adapter(),
+    [domain.Kind.RocketpoolStakingRewards]: new rocketpool_staking_rewards.Adapter(),
+    [domain.Kind.SparkFiHealthFactor]: new spark_fi_health_factor.Adapter(),
+
     // Test adapters
     [domain.Kind.TestIsMatching]: new test_is_matching.Adapter(),
     [domain.Kind.TestIsNotMatching]: new test_is_not_matching.Adapter(),
@@ -79,4 +93,9 @@ export class NotSupportedChainError extends Error {
     toJSON(): string {
         return this.message;
     }
+}
+
+export function hash(data: Bun.BlobOrStringOrBuffer): string {
+    const hasher = new Bun.CryptoHasher("md5");
+    return hasher.update(data).digest("hex");
 }

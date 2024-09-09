@@ -23,4 +23,6 @@ jobs:
         run: bun run check
 
       - name: Run tests
+        env:
+          RPC_URLS: ${{ secrets.RPC_URLS }}
         run: bun test
