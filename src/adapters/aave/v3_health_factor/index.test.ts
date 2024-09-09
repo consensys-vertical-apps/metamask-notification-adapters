@@ -1,7 +1,7 @@
 import * as t from "bun:test";
 import * as uuid from "uuid";
-import * as adapters from "#/adapters";
 import * as aave_v3_health_factor from "#/adapters/aave/v3_health_factor";
+import * as errors from "#/adapters/errors";
 import * as domain from "#/domain";
 import * as testutils from "#/testutils";
 
@@ -23,7 +23,7 @@ t.describe("aave_v3_health_factor adapter", () => {
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
             const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
-            t.expect(result).toEqual({ active: false, error: new adapters.NotSupportedChainError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
@@ -46,7 +46,7 @@ t.describe("aave_v3_health_factor adapter", () => {
 
             const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
 
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -88,7 +88,7 @@ t.describe("aave_v3_health_factor adapter", () => {
 
             const result = await adapter.matchTrigger(trigger, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
             readContract.mockRestore();
         });
@@ -96,7 +96,7 @@ t.describe("aave_v3_health_factor adapter", () => {
         t.test("should error when chain is not supported", async () => {
             const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client);
 
-            t.expect(result).toEqual({ matched: false, error: new adapters.NotSupportedChainError() });
+            t.expect(result).toEqual({ matched: false, error: new errors.NotSupportedChainError() });
         });
     });
 

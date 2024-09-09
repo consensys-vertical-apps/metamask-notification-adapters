@@ -1,5 +1,6 @@
 import * as viem from "viem";
-import * as adapters from "#/adapters";
+import * as errors from "#/adapters/errors";
+import type * as types from "#/adapters/types";
 import * as domain from "#/domain";
 
 export type UserSettings = {
@@ -21,7 +22,7 @@ export type Context = {
     daysSinceLastNotification: number;
 };
 
-export class Adapter implements adapters.IContractAdapter<UserSettings, State, Context> {
+export class Adapter implements types.IContractAdapter<UserSettings, State, Context> {
     private readonly DEFAULT_NOTIFICATION_INTERVAL_DAYS = 30;
 
     private readonly DUST_THRESHOLD: bigint = viem.parseEther("0.0001"); // rETH, adjust as needed
@@ -34,9 +35,9 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     private readonly ROCKET_NETWORK_BALANCES_ABI = viem.parseAbi(["function getTotalRETHSupply() view returns (uint256)", "function getTotalETHBalance() view returns (uint256)"]);
     private readonly ERC20_TRANSFER_EVENT = viem.parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<adapters.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
         if (chainId !== domain.Chain.Ethereum) {
-            return { active: false, error: new adapters.NotSupportedChainError() };
+            return { active: false, error: new errors.NotSupportedChainError() };
         }
 
         const balance = await client.readContract({
@@ -48,18 +49,18 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         // Check if the user is active (balance above dust threshold)
         if (balance <= this.DUST_THRESHOLD) {
-            return { active: false, error: new adapters.NotActiveUserError() };
+            return { active: false, error: new errors.NotActiveUserError() };
         }
 
         return { active: true, userSettings: { notificationIntervalDays: this.DEFAULT_NOTIFICATION_INTERVAL_DAYS } };
     }
 
-    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<adapters.MatchResult<State, Context>> {
+    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
         const currentRethBalance = await this.getRethBalance(client, trigger.address);
 
         // Check if the user is active (balance above dust threshold)
         if (currentRethBalance <= this.DUST_THRESHOLD) {
-            return { matched: false, error: new adapters.NotActiveUserError() };
+            return { matched: false, error: new errors.NotActiveUserError() };
         }
 
         const currentBlockNumber = await client.getBlockNumber();

@@ -1,6 +1,6 @@
 import * as t from "bun:test";
 import * as uuid from "uuid";
-import * as adapters from "#/adapters";
+import * as errors from "#/adapters/errors";
 import * as rocketpool_staking_rewards from "#/adapters/rocketpool/staking_rewards";
 import * as domain from "#/domain";
 import * as testutils from "#/testutils";
@@ -35,7 +35,7 @@ t.describe("rocketpool_staking_rewards adapter", () => {
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
             const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
-            t.expect(result).toEqual({ active: false, error: new adapters.NotSupportedChainError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
@@ -54,13 +54,13 @@ t.describe("rocketpool_staking_rewards adapter", () => {
         t.test("should handle not active user", async () => {
             mocks.readContract.mockResolvedValueOnce(0n);
             const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle when user doesn't have enough balance", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["DUST_THRESHOLD"] - 1n);
             const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
-            t.expect(result).toEqual({ active: false, error: new adapters.NotActiveUserError() });
+            t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle active user", async () => {
@@ -77,7 +77,7 @@ t.describe("rocketpool_staking_rewards adapter", () => {
             const result = await adapter.matchTrigger(trigger, client);
 
             t.expect(result.matched).toBe(false);
-            t.expect(result.error).toBeInstanceOf(adapters.NotActiveUserError);
+            t.expect(result.error).toBeInstanceOf(errors.NotActiveUserError);
         });
 
         t.test("should initialize state on first run", async () => {

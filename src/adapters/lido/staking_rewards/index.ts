@@ -1,5 +1,6 @@
 import * as viem from "viem";
-import * as adapters from "#/adapters";
+import * as errors from "#/adapters/errors";
+import type * as types from "#/adapters/types";
 import * as domain from "#/domain";
 
 export type UserSettings = {
@@ -23,7 +24,7 @@ export type Context = {
     daysSinceLastNotification: number;
 };
 
-export class Adapter implements adapters.IContractAdapter<UserSettings, State, Context> {
+export class Adapter implements types.IContractAdapter<UserSettings, State, Context> {
     private readonly STETH_DUST_THRESHOLD: bigint = viem.parseEther("0.0001"); // adjust as needed
 
     private readonly STETH_TOKEN_ADDRESS: viem.Address = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84";
@@ -36,9 +37,9 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     private readonly STETH_TRANSFER_EVENT = viem.parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 
     // Checks if a user is eligible for Lido staking rewards notifications
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<adapters.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
         if (chainId !== domain.Chain.Ethereum) {
-            return { active: false, error: new adapters.NotSupportedChainError() };
+            return { active: false, error: new errors.NotSupportedChainError() };
         }
 
         // Fetch the user's stETH balance
@@ -51,7 +52,7 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
 
         // Check if the user is active (balance above dust threshold)
         if (balance <= this.STETH_DUST_THRESHOLD) {
-            return { active: false, error: new adapters.NotActiveUserError() };
+            return { active: false, error: new errors.NotActiveUserError() };
         }
 
         // Default to monthly notifications
@@ -59,12 +60,12 @@ export class Adapter implements adapters.IContractAdapter<UserSettings, State, C
     }
 
     // Matches the trigger conditions and updates the state
-    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<adapters.MatchResult<State, Context>> {
+    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
         const currentStethBalance = await this.getStethBalance(client, trigger.address);
 
         // Check if the user is active (balance above dust threshold)
         if (currentStethBalance <= this.STETH_DUST_THRESHOLD) {
-            return { matched: false, error: new adapters.NotActiveUserError() };
+            return { matched: false, error: new errors.NotActiveUserError() };
         }
 
         const currentBlockNumber = await client.getBlockNumber();
