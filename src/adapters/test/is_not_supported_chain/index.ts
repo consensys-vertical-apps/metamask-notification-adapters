@@ -15,7 +15,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
     }
 
     public async matchTrigger(_trigger: domain.Trigger<UserSettings, State>, _client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
-        return { matched: true, context: null };
+        return { matched: false, error: new errors.NotSupportedChainError() };
     }
 
     public async mapIntoNotificationData(_trigger: domain.Trigger<UserSettings, State>, _context: Context): Promise<domain.NotificationData> {

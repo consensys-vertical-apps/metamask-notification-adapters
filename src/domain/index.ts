@@ -53,11 +53,6 @@ export type Trigger<U = Record<string, unknown> | null, S = Record<string, unkno
     scheduledAt: Date;
 };
 
-export type TriggersMessage = {
-    id: string;
-    triggers: Trigger[];
-};
-
 export type Notification = {
     id: string;
     trigger_id: string;
