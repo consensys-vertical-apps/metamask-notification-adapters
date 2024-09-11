@@ -1,24 +1,26 @@
 import type * as viem from "viem";
-import * as errors from "#/adapters/errors";
 import type * as types from "#/adapters/types";
 import type * as domain from "#/domain";
-
-type UserSettings = null;
+import * as utils from "#/adapters/utils";
 
 type State = null;
 
-type Context = null;
+type UserSettings = null;
+
+type Context = {
+    value: string;
+};
 
 export class Adapter implements types.IContractAdapter<UserSettings, State, Context> {
     public async checkUser(_address: viem.Address, _chainId: domain.Chain, _client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
-        return { active: false, error: new errors.NotActiveUserError() };
+        return { active: true };
     }
 
     public async matchTrigger(_trigger: domain.Trigger<UserSettings, State>, _client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
-        return { matched: false, error: new errors.NotActiveUserError() };
+        return { matched: true, dedupKey: utils.hash("some key"), context: { value: "some value" } };
     }
 
-    public async mapIntoNotificationData(_trigger: domain.Trigger<UserSettings, State>, _context: Context): Promise<domain.NotificationData> {
-        return { title: "test", body: "test" };
+    public async mapIntoNotificationData(trigger: domain.Trigger, context: Context): Promise<domain.NotificationData> {
+        return { chainId: trigger.chainId, value: context.value.toUpperCase() };
     }
 }
