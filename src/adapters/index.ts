@@ -15,6 +15,7 @@ import type * as types from "#/adapters/types";
 import * as morpho_aave3_eth_health_factor from "#/adapters/morpho/aave3_eth_health_factor";
 import * as morpho_aave2_health_factor from "#/adapters/morpho/aave2_health_factor";
 import * as morpho_compound_health_factor from "#/adapters/morpho/compound_health_factor";
+import * as morpho_health_factor from "#/adapters/morpho/morpho_health_factor";
 import * as domain from "#/domain";
 
 export const CONTRACT_ADAPTERS: types.ContractAdapters = {
@@ -37,4 +38,5 @@ export const CONTRACT_ADAPTERS: types.ContractAdapters = {
     [domain.Kind.MorphoAave3EthHealthFactor]: new morpho_aave3_eth_health_factor.Adapter(),
     [domain.Kind.MorphoAave2HealthFactor]: new morpho_aave2_health_factor.Adapter(),
     [domain.Kind.MorphoCompoundHealthFactor]: new morpho_compound_health_factor.Adapter(),
+    [domain.Kind.MorphoHealthFactor]: new morpho_health_factor.Adapter(),
 };

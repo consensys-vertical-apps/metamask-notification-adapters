@@ -1,0 +1,24 @@
+{
+  "name": "test",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "lint": "biome lint --apply .",
+    "format": "biome format --write .",
+    "check": "biome check --apply . && bun run typecheck",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "biome": "^0.3.3",
+    "ethers": "^6.13.2",
+    "ethers-types": "^3.17.2",
+    "viem": "^2.21.2"
+  }
+}

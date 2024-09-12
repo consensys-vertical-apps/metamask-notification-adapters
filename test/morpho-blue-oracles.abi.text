@@ -1,0 +1,1 @@
+function price() external view returns (uint256)

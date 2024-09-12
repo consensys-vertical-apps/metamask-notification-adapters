@@ -11,6 +11,7 @@ export enum Kind {
     MorphoAave3EthHealthFactor = "morpho_aave3_eth_health_factor",
     MorphoAave2HealthFactor = "morpho_aave2_health_factor",
     MorphoCompoundHealthFactor = "morpho_compound_health_factor",
+    MorphoHealthFactor = "morpho_health_factor",
 
     // Test kinds
     TestIsMatching = "test_is_matching",
