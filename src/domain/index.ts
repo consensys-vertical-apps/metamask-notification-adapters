@@ -1,4 +1,5 @@
 import type * as viem from "viem";
+import * as viemchains from "viem/chains";
 
 export enum Kind {
     // Actual kinds
@@ -41,6 +42,16 @@ export enum Chain {
     Avalanche = "43114",
     Linea = "59144",
 }
+
+export const CHAIN_TO_VIEM_CHAIN: Partial<Record<Chain, viem.Chain>> = {
+    [Chain.Ethereum]: viemchains.mainnet,
+    [Chain.Optimism]: viemchains.optimism,
+    [Chain.BNB]: viemchains.bsc,
+    [Chain.Polygon]: viemchains.polygon,
+    [Chain.Arbitrum]: viemchains.arbitrum,
+    [Chain.Avalanche]: viemchains.avalanche,
+    [Chain.Linea]: viemchains.linea,
+};
 
 export type Trigger<U = Record<string, unknown> | null, S = Record<string, unknown> | null> = {
     id: string;
