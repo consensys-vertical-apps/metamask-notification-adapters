@@ -8,6 +8,7 @@ import * as testutils from "#/testutils";
 t.describe("spark_fi_health_factor adapter", () => {
     const adapter = new spark_fi_health_factor.Adapter();
     const client = testutils.createRPCClient();
+    const blockNumber = 20868505n;
 
     const trigger: domain.Trigger<spark_fi_health_factor.UserSettings, spark_fi_health_factor.State> = {
         id: uuid.v4(),
@@ -30,70 +31,72 @@ t.describe("spark_fi_health_factor adapter", () => {
 
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
             mocks.readContract.mockResolvedValueOnce([0n]);
 
-            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(mocks.readContract).toHaveBeenCalledWith({
                 address: adapter["POOL_ADDRESSES"][domain.Chain.Ethereum],
                 abi: adapter["POOL_ABI"],
                 functionName: "getUserAccountData",
                 args: ["0x12Dec026d5826F95bA23957529B36a386E085583"],
+                blockNumber,
             });
         });
 
         t.test("should handle not active user", async () => {
             mocks.readContract.mockResolvedValueOnce([0n]);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle acive user", async () => {
             mocks.readContract.mockResolvedValueOnce([1n]);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: true, userSettings: { healthFactorThreshold: 1.1 } });
         });
     });
 
     t.describe("matching", () => {
         t.test("should error when chain is not supported", async () => {
-            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client);
+            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client, blockNumber);
             t.expect(result).toEqual({ matched: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
             mocks.readContract.mockResolvedValueOnce([0n]);
 
-            await adapter.matchTrigger(trigger, client);
+            await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(mocks.readContract).toHaveBeenCalledWith({
                 address: adapter["POOL_ADDRESSES"][domain.Chain.Ethereum],
                 abi: adapter["POOL_ABI"],
                 functionName: "getUserAccountData",
                 args: ["0x12Dec026d5826F95bA23957529B36a386E085583"],
+                blockNumber,
             });
         });
 
         t.test("should error when user is not active", async () => {
             mocks.readContract.mockResolvedValueOnce([0n, 0n, 0n, 0n, 0n, 0n]);
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should match when current health factor value exceeds threshold", async () => {
             mocks.readContract.mockResolvedValueOnce([1n, 0n, 0n, 0n, 0n, BigInt(3.4 * 10 ** 18)]);
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
             t.expect(result).toEqual({ matched: true, dedupKey: "b326b5062b2f0e69046810717534cb09", context: { healthFactor: 3.4 } });
         });
 
         t.test("should not match when current health factor value does not exceed threshold", async () => {
             mocks.readContract.mockResolvedValueOnce([1n, 0n, 0n, 0n, 0n, BigInt(6 * 10 ** 18)]);
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
             t.expect(result).toEqual({ matched: false });
         });
     });

@@ -10,6 +10,7 @@ import * as testutils from "#/testutils";
 t.describe("notional_loan_expiration adapter", () => {
     const adapter = new notional_loan_expiration.Adapter();
     const client = testutils.createRPCClient();
+    const blockNumber = 1000n;
 
     const defaultReminderDelayInSeconds = 60 * 60 * 24 * 7;
     const nowInSeconds = Date.now() / 1000;
@@ -27,20 +28,21 @@ t.describe("notional_loan_expiration adapter", () => {
 
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
-            const result = await adapter.checkUser(trigger.address, domain.Chain.None, client);
+            const result = await adapter.checkUser(trigger.address, domain.Chain.None, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
             const readContract = t.spyOn(client, "readContract").mockResolvedValue([0n]);
 
-            await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
+            await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(readContract).toHaveBeenCalledWith({
                 address: adapter["ROUTER_ADDRESSES"][domain.Chain.Ethereum],
                 abi: adapter["ROUTER_ABI"],
                 functionName: "getAccountPortfolio",
                 args: [trigger.address],
+                blockNumber,
             });
 
             readContract.mockRestore();
@@ -58,7 +60,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -77,7 +79,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -96,7 +98,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -115,7 +117,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser(trigger.address, domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: true, userSettings: { reminderDelayInSeconds: adapter["DEFAULT_REMINDER_DELAY_IN_SECONDS"] } });
 
@@ -125,7 +127,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
     t.describe("matching", () => {
         t.test("should error when chain is not supported", async () => {
-            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client);
+            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotSupportedChainError() });
         });
@@ -133,13 +135,14 @@ t.describe("notional_loan_expiration adapter", () => {
         t.test("should call the right function with the right args", async () => {
             const readContract = t.spyOn(client, "readContract").mockResolvedValue([0n]);
 
-            await adapter.matchTrigger(trigger, client);
+            await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(readContract).toHaveBeenCalledWith({
                 address: adapter["ROUTER_ADDRESSES"][trigger.chainId],
                 abi: adapter["ROUTER_ABI"],
                 functionName: "getAccountPortfolio",
                 args: [trigger.address],
+                blockNumber,
             });
 
             readContract.mockRestore();
@@ -157,7 +160,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -176,7 +179,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -195,7 +198,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -214,7 +217,7 @@ t.describe("notional_loan_expiration adapter", () => {
                 },
             ]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -233,7 +236,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const readContract = t.spyOn(client, "readContract").mockResolvedValue([shouldMatchLoan]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({
                 matched: false,
@@ -254,7 +257,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const readContract = t.spyOn(client, "readContract").mockResolvedValue([shouldMatchLoan]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({
                 matched: true,
@@ -292,7 +295,7 @@ t.describe("notional_loan_expiration adapter", () => {
 
             const readContract = t.spyOn(client, "readContract").mockResolvedValue(shouldMatchLoans);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result.matched).toBeTrue();
             if (!result.matched) {

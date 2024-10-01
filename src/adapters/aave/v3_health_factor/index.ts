@@ -28,7 +28,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         "function getUserAccountData(address user) external view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 availableBorrowsBase, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)",
     ]);
 
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient, blockNumber: bigint): Promise<types.UserCheckResult<UserSettings>> {
         // check if the chain is supported
         const ca = this.POOL_ADDRESSES[chainId];
         if (!ca) {
@@ -40,6 +40,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             abi: this.POOL_ABI,
             functionName: "getUserAccountData",
             args: [address],
+            blockNumber,
         });
 
         // check if the user is active by checking if they have any collateral
@@ -50,7 +51,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         return { active: true, userSettings: { healthFactorThreshold: 1.1 } };
     }
 
-    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
+    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient, blockNumber: bigint): Promise<types.MatchResult<State, Context>> {
         // check if the chain is supported
         const address = this.POOL_ADDRESSES[trigger.chainId];
         if (!address) {
@@ -63,6 +64,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             abi: this.POOL_ABI,
             functionName: "getUserAccountData",
             args: [trigger.address],
+            blockNumber,
         });
 
         // check if the user is active

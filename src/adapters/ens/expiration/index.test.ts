@@ -11,6 +11,7 @@ t.describe("ens_expiration adapter", () => {
     const client = testutils.createRPCClient();
     const defaultReminderDelayInSeconds = 60 * 60 * 24 * 7;
     const nowInSeconds = Date.now() / 1000;
+    const blockNumber = 20868505n;
 
     const trigger: domain.Trigger<ens_expiration.UserSettings, ens_expiration.State> = {
         id: uuid.v4(),
@@ -25,17 +26,18 @@ t.describe("ens_expiration adapter", () => {
 
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call with the right args", async () => {
             const getEnsName = t.spyOn(client, "getEnsName").mockResolvedValue(null);
 
-            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(getEnsName).toHaveBeenCalledWith({
                 address: "0x12Dec026d5826F95bA23957529B36a386E085583",
+                blockNumber,
             });
 
             getEnsName.mockRestore();
@@ -44,7 +46,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should NOT handle user WITHOUT a reverse name", async () => {
             const getEnsName = t.spyOn(client, "getEnsName").mockResolvedValue(null);
 
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -54,7 +56,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should NOT handle user WITHOUT a first level reverse name", async () => {
             const getEnsName = t.spyOn(client, "getEnsName").mockResolvedValue("test.linea.eth");
 
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -64,7 +66,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should NOT handle user WITH a subdomain reverse name", async () => {
             const getEnsName = t.spyOn(client, "getEnsName").mockResolvedValue("slasha.vitalik.eth");
 
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
 
@@ -74,7 +76,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should handle user WITH a first level reverse name", async () => {
             const getEnsName = t.spyOn(client, "getEnsName").mockResolvedValue("vitalik.eth");
 
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(result).toEqual({
                 active: true,
@@ -87,7 +89,7 @@ t.describe("ens_expiration adapter", () => {
 
     t.describe("matching", () => {
         t.test("should error when chain is not supported", async () => {
-            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client);
+            const result = await adapter.matchTrigger({ ...trigger, chainId: domain.Chain.None }, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotSupportedChainError() });
         });
@@ -95,7 +97,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should error when ENS resolve an other address", async () => {
             const getEnsAddress = t.spyOn(client, "getEnsAddress").mockResolvedValue("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96046");
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -105,7 +107,7 @@ t.describe("ens_expiration adapter", () => {
         t.test("should error when ENS do not resolve a address anymore", async () => {
             const getEnsAddress = t.spyOn(client, "getEnsAddress").mockResolvedValue(null);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({ matched: false, error: new errors.NotActiveUserError() });
 
@@ -120,7 +122,7 @@ t.describe("ens_expiration adapter", () => {
 
             const expirationDateIso = new Date(expirationDateInSeconds * 1000).toISOString();
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({
                 matched: true,
@@ -138,7 +140,7 @@ t.describe("ens_expiration adapter", () => {
             const getEnsAddress = t.spyOn(client, "getEnsAddress").mockResolvedValue(trigger.address);
             const readContract = t.spyOn(client, "readContract").mockResolvedValue(expirationDateInSeconds);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result).toEqual({
                 matched: false,
