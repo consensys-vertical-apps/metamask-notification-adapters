@@ -8,6 +8,7 @@ import * as testutils from "#/testutils";
 t.describe("rocketpool_staking_rewards adapter", () => {
     const adapter = new rocketpool_staking_rewards.Adapter();
     const client = testutils.createRPCClient();
+    const blockNumber = 1000n;
 
     const trigger: domain.Trigger<rocketpool_staking_rewards.UserSettings, rocketpool_staking_rewards.State> = {
         id: uuid.v4(),
@@ -22,50 +23,49 @@ t.describe("rocketpool_staking_rewards adapter", () => {
 
     const mocks = {
         readContract: t.spyOn(client, "readContract"),
-        getBlockNumber: t.spyOn(client, "getBlockNumber"),
         getLogs: t.spyOn(client, "getLogs"),
     };
 
     t.beforeEach(() => {
         mocks.readContract.mockClear();
-        mocks.getBlockNumber.mockClear();
         mocks.getLogs.mockClear();
     });
 
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
             mocks.readContract.mockResolvedValueOnce(0n);
 
-            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(mocks.readContract).toHaveBeenCalledWith({
                 address: adapter["RETH_TOKEN_ADDRESS"],
                 abi: adapter["RETH_ABI"],
                 functionName: "balanceOf",
                 args: ["0x12Dec026d5826F95bA23957529B36a386E085583"],
+                blockNumber: blockNumber,
             });
         });
 
         t.test("should handle not active user", async () => {
             mocks.readContract.mockResolvedValueOnce(0n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle when user doesn't have enough balance", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["DUST_THRESHOLD"] - 1n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle active user", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["DUST_THRESHOLD"] + 1n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: true, userSettings: { notificationIntervalDays: 30 } });
         });
     });
@@ -74,7 +74,7 @@ t.describe("rocketpool_staking_rewards adapter", () => {
         t.test("should return NotActiveUserError for balance below dust threshold", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["DUST_THRESHOLD"] - 1n);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.error).toBeInstanceOf(errors.NotActiveUserError);
@@ -87,15 +87,13 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10000 * 1e18)) // totalRethSupply
                 .mockResolvedValueOnce(BigInt(10500 * 1e18)); // totalEthBalance
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
-
             mocks.getLogs.mockResolvedValueOnce([]);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.startingEthValue).toBe(10499999999999998950n); // 10 rETH * 1.05 exchange rate
             t.expect(result.state?.ethValueChanges).toEqual([]);
         });
@@ -107,8 +105,6 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10000 * 1e18)) // totalRethSupply
                 .mockResolvedValueOnce(BigInt(10500 * 1e18)); // totalEthBalance
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
-
             mocks.getLogs.mockResolvedValueOnce([]);
 
             const state: rocketpool_staking_rewards.State = {
@@ -118,11 +114,11 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 ethValueChanges: [BigInt(11e18)], // Deposit of 1 ETH
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, state }, client);
+            const result = await adapter.matchTrigger({ ...trigger, state }, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.ethValueChanges.length).toBe(1);
         });
 
@@ -133,8 +129,6 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10000 * 1e18)) // totalRethSupply
                 .mockResolvedValueOnce(BigInt(10500 * 1e18)); // totalEthBalance
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
-
             mocks.getLogs.mockResolvedValueOnce([]);
 
             const initialState: rocketpool_staking_rewards.State = {
@@ -144,11 +138,11 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 ethValueChanges: [],
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, state: initialState }, client);
+            const result = await adapter.matchTrigger({ ...trigger, state: initialState }, client, blockNumber);
 
             t.expect(result.matched).toBe(true);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.ethValueChanges).toEqual([]);
             t.expect(result.context).toBeDefined();
             t.expect(result.context?.daysSinceLastNotification).toBe(31);
@@ -161,8 +155,6 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10000 * 1e18)) // totalRethSupply
                 .mockResolvedValueOnce(BigInt(10500 * 1e18)); // totalEthBalance
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
-
             mocks.getLogs.mockResolvedValueOnce([]);
 
             const initialState: rocketpool_staking_rewards.State = {
@@ -172,11 +164,11 @@ t.describe("rocketpool_staking_rewards adapter", () => {
                 ethValueChanges: [],
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, userSettings: { notificationIntervalDays: 7 }, state: initialState }, client);
+            const result = await adapter.matchTrigger({ ...trigger, userSettings: { notificationIntervalDays: 7 }, state: initialState }, client, blockNumber);
 
             t.expect(result.matched).toBe(true);
             t.expect(result.context?.daysSinceLastNotification).toBe(8);
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
         });
     });
 

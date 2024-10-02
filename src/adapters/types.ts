@@ -7,8 +7,8 @@ export type ContractAdapters = {
 };
 
 export interface IContractAdapter<U, S, C> {
-    checkUser: (address: viem.Address, chainId: domain.Chain, client: viem.PublicClient) => Promise<UserCheckResult<U>>;
-    matchTrigger: (trigger: domain.Trigger<U, S>, client: viem.PublicClient) => Promise<MatchResult<S, C>>;
+    checkUser: (address: viem.Address, chainId: domain.Chain, client: viem.PublicClient, blocknum: bigint) => Promise<UserCheckResult<U>>;
+    matchTrigger: (trigger: domain.Trigger<U, S>, client: viem.PublicClient, blocknum: bigint) => Promise<MatchResult<S, C>>;
     mapIntoNotificationData: (trigger: domain.Trigger<U, S>, context: C) => Promise<domain.NotificationData>;
 }
 

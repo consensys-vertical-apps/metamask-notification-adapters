@@ -48,7 +48,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
     };
 
     // Check if the user has at least one active loan
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient, blockNumber: bigint): Promise<types.UserCheckResult<UserSettings>> {
         const routerAddresss = this.ROUTER_ADDRESSES[chainId];
         if (!routerAddresss) {
             return { active: false, error: new errors.NotSupportedChainError() };
@@ -60,6 +60,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             abi: this.ROUTER_ABI,
             functionName: "getAccountPortfolio",
             args: [address],
+            blockNumber,
         });
 
         // Get the user's active loans with enough amount
@@ -89,7 +90,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         return { active: true, userSettings: { reminderDelayInSeconds: this.DEFAULT_REMINDER_DELAY_IN_SECONDS } };
     }
 
-    public async matchTrigger(trigger: domain.Trigger<UserSettings>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
+    public async matchTrigger(trigger: domain.Trigger<UserSettings>, client: viem.PublicClient, blockNumber: bigint): Promise<types.MatchResult<State, Context>> {
         const routerAddresss = this.ROUTER_ADDRESSES[trigger.chainId];
         if (!routerAddresss) {
             return { matched: false, error: new errors.NotSupportedChainError() };
@@ -101,6 +102,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             abi: this.ROUTER_ABI,
             functionName: "getAccountPortfolio",
             args: [trigger.address],
+            blockNumber,
         });
 
         // Get the user's active loans with enough amount

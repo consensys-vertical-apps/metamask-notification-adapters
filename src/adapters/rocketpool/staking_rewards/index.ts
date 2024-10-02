@@ -35,7 +35,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
     private readonly ROCKET_NETWORK_BALANCES_ABI = viem.parseAbi(["function getTotalRETHSupply() view returns (uint256)", "function getTotalETHBalance() view returns (uint256)"]);
     private readonly ERC20_TRANSFER_EVENT = viem.parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 
-    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient): Promise<types.UserCheckResult<UserSettings>> {
+    public async checkUser(address: viem.Address, chainId: domain.Chain, client: viem.PublicClient, blockNumber: bigint): Promise<types.UserCheckResult<UserSettings>> {
         if (chainId !== domain.Chain.Ethereum) {
             return { active: false, error: new errors.NotSupportedChainError() };
         }
@@ -45,6 +45,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             abi: this.RETH_ABI,
             functionName: "balanceOf",
             args: [address],
+            blockNumber: blockNumber,
         });
 
         // Check if the user is active (balance above dust threshold)
@@ -55,17 +56,16 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         return { active: true, userSettings: { notificationIntervalDays: this.DEFAULT_NOTIFICATION_INTERVAL_DAYS } };
     }
 
-    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient): Promise<types.MatchResult<State, Context>> {
-        const currentRethBalance = await this.getRethBalance(client, trigger.address);
+    public async matchTrigger(trigger: domain.Trigger<UserSettings, State>, client: viem.PublicClient, blockNumber: bigint): Promise<types.MatchResult<State, Context>> {
+        const currentRethBalance = await this.getRethBalance(client, trigger.address, blockNumber);
 
         // Check if the user is active (balance above dust threshold)
         if (currentRethBalance <= this.DUST_THRESHOLD) {
             return { matched: false, error: new errors.NotActiveUserError() };
         }
 
-        const currentBlockNumber = await client.getBlockNumber();
         const currentTimestamp = Math.floor(Date.now() / 1000);
-        const currentExchangeRate = await this.getRethExchangeRate(client, currentBlockNumber);
+        const currentExchangeRate = await this.getRethExchangeRate(client, blockNumber);
         const currentEthValue = (currentRethBalance * currentExchangeRate) / BigInt(1e18);
 
         // Initialize state if it's the first run
@@ -73,7 +73,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             return {
                 matched: false,
                 state: {
-                    lastBlockNumber: currentBlockNumber,
+                    lastBlockNumber: blockNumber,
                     lastNotificationTimestamp: currentTimestamp,
                     startingEthValue: currentEthValue,
                     ethValueChanges: [],
@@ -82,7 +82,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         }
 
         // Fetch ETH value changes since last run
-        const newEthValueChanges = await this.getEthValueChanges(client, trigger.address, trigger.state.lastBlockNumber + 1n, currentBlockNumber);
+        const newEthValueChanges = await this.getEthValueChanges(client, trigger.address, trigger.state.lastBlockNumber + 1n, blockNumber);
 
         // Combine existing and new ETH value changes
         const allEthValueChanges = [...trigger.state.ethValueChanges, ...newEthValueChanges];
@@ -96,7 +96,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
             return {
                 matched: true,
                 state: {
-                    lastBlockNumber: currentBlockNumber,
+                    lastBlockNumber: blockNumber,
                     lastNotificationTimestamp: currentTimestamp,
                     startingEthValue: currentEthValue,
                     ethValueChanges: [],
@@ -115,7 +115,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         return {
             matched: false,
             state: {
-                lastBlockNumber: currentBlockNumber,
+                lastBlockNumber: blockNumber,
                 lastNotificationTimestamp: trigger.state.lastNotificationTimestamp,
                 startingEthValue: trigger.state.startingEthValue,
                 ethValueChanges: allEthValueChanges,
@@ -134,7 +134,7 @@ export class Adapter implements types.IContractAdapter<UserSettings, State, Cont
         };
     }
 
-    private async getRethBalance(client: viem.PublicClient, address: viem.Address, blockNumber?: bigint): Promise<bigint> {
+    private async getRethBalance(client: viem.PublicClient, address: viem.Address, blockNumber: bigint): Promise<bigint> {
         return client.readContract({
             address: this.RETH_TOKEN_ADDRESS,
             abi: this.RETH_ABI,

@@ -8,6 +8,7 @@ import * as testutils from "#/testutils";
 t.describe("lido_staking_rewards adapter", () => {
     const adapter = new lido_staking_rewards.Adapter();
     const client = testutils.createRPCClient();
+    const blockNumber = 20868505n;
 
     const trigger: domain.Trigger<lido_staking_rewards.UserSettings, lido_staking_rewards.State> = {
         id: uuid.v4(),
@@ -34,38 +35,39 @@ t.describe("lido_staking_rewards adapter", () => {
 
     t.describe("check user", () => {
         t.test("should handle not supported chain", async () => {
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.None, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotSupportedChainError() });
         });
 
         t.test("should call the right function with the right args", async () => {
             mocks.readContract.mockResolvedValueOnce(0n);
 
-            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
 
             t.expect(mocks.readContract).toHaveBeenCalledWith({
                 address: adapter["STETH_TOKEN_ADDRESS"],
                 abi: adapter["STETH_ABI"],
                 functionName: "balanceOf",
                 args: ["0x12Dec026d5826F95bA23957529B36a386E085583"],
+                blockNumber,
             });
         });
 
         t.test("should handle not active user", async () => {
             mocks.readContract.mockResolvedValueOnce(0n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle when user doesn't have enough balance", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["STETH_DUST_THRESHOLD"] - 1n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: false, error: new errors.NotActiveUserError() });
         });
 
         t.test("should handle active user", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["STETH_DUST_THRESHOLD"] + 1n);
-            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client);
+            const result = await adapter.checkUser("0x12Dec026d5826F95bA23957529B36a386E085583", domain.Chain.Ethereum, client, blockNumber);
             t.expect(result).toEqual({ active: true, userSettings: { notificationIntervalDays: 30 } });
         });
     });
@@ -74,7 +76,7 @@ t.describe("lido_staking_rewards adapter", () => {
         t.test("should return NotActiveUserError for balance below dust threshold", async () => {
             mocks.readContract.mockResolvedValueOnce(adapter["STETH_DUST_THRESHOLD"] - 1n);
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.error).toBeInstanceOf(errors.NotActiveUserError);
@@ -85,13 +87,13 @@ t.describe("lido_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10 * 1e18)) // currentStethBalance
                 .mockResolvedValueOnce(BigInt(1.05 * 1e18)); // stETH exchange rate
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
+            const blockNumber = 1000n;
 
-            const result = await adapter.matchTrigger(trigger, client);
+            const result = await adapter.matchTrigger(trigger, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.startBalance).toBe(BigInt(10 * 1e18));
             t.expect(result.state?.startRate).toBe(BigInt(1.05 * 1e18));
             t.expect(result.state?.deposits).toBe(0n);
@@ -103,7 +105,7 @@ t.describe("lido_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10 * 1e18)) // currentStethBalance
                 .mockResolvedValueOnce(BigInt(1.05 * 1e18)); // stETH exchange rate
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
+            const blockNumber = 1000n;
 
             mocks.getLogs
                 .mockResolvedValueOnce([]) // deposits
@@ -118,11 +120,11 @@ t.describe("lido_staking_rewards adapter", () => {
                 withdrawals: 1n,
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, state }, client);
+            const result = await adapter.matchTrigger({ ...trigger, state }, client, blockNumber);
 
             t.expect(result.matched).toBe(false);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.deposits).toBe(1n);
             t.expect(result.state?.withdrawals).toBe(1n);
         });
@@ -132,7 +134,7 @@ t.describe("lido_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10 * 1e18)) // currentStethBalance
                 .mockResolvedValueOnce(BigInt(1.05 * 1e18)); // stETH exchange rate
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
+            const blockNumber = 1000n;
 
             mocks.getLogs
                 .mockResolvedValueOnce([]) // deposits
@@ -147,11 +149,11 @@ t.describe("lido_staking_rewards adapter", () => {
                 withdrawals: 1n,
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, state: initialState }, client);
+            const result = await adapter.matchTrigger({ ...trigger, state: initialState }, client, blockNumber);
 
             t.expect(result.matched).toBe(true);
             t.expect(result.state).toBeDefined();
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
             t.expect(result.state?.deposits).toBe(0n);
             t.expect(result.state?.withdrawals).toBe(0n);
             t.expect(result.context).toBeDefined();
@@ -163,7 +165,7 @@ t.describe("lido_staking_rewards adapter", () => {
                 .mockResolvedValueOnce(BigInt(10 * 1e18)) // currentStethBalance
                 .mockResolvedValueOnce(BigInt(1.05 * 1e18)); // stETH exchange rate
 
-            mocks.getBlockNumber.mockResolvedValueOnce(BigInt(1000));
+            const blockNumber = 1000n;
 
             mocks.getLogs
                 .mockResolvedValueOnce([]) // deposits
@@ -178,11 +180,11 @@ t.describe("lido_staking_rewards adapter", () => {
                 withdrawals: 0n,
             };
 
-            const result = await adapter.matchTrigger({ ...trigger, userSettings: { notificationIntervalDays: 7 }, state: initialState }, client);
+            const result = await adapter.matchTrigger({ ...trigger, userSettings: { notificationIntervalDays: 7 }, state: initialState }, client, blockNumber);
 
             t.expect(result.matched).toBe(true);
             t.expect(result.context?.daysSinceLastNotification).toBe(8);
-            t.expect(result.state?.lastBlockNumber).toBe(BigInt(1000));
+            t.expect(result.state?.lastBlockNumber).toBe(blockNumber);
         });
     });
 
