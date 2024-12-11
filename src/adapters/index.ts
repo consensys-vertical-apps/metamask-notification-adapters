@@ -12,6 +12,9 @@ import * as test_is_not_supported_chain from "#/adapters/test/is_not_supported_c
 import * as test_uses_match_dedup_key from "#/adapters/test/uses_match_dedup_key";
 import * as test_uses_trigger_state from "#/adapters/test/uses_trigger_state";
 import type * as types from "#/adapters/types";
+import * as morpho_aave3_eth_health_factor from "#/adapters/morpho/aave3_eth_health_factor";
+import * as morpho_aave2_health_factor from "#/adapters/morpho/aave2_health_factor";
+import * as morpho_compound_health_factor from "#/adapters/morpho/compound_health_factor";
 import * as domain from "#/domain";
 
 export const CONTRACT_ADAPTERS: types.ContractAdapters = {
@@ -31,4 +34,7 @@ export const CONTRACT_ADAPTERS: types.ContractAdapters = {
     [domain.Kind.TestIsNotSupportedChain]: new test_is_not_supported_chain.Adapter(),
     [domain.Kind.TestUsesMatchDedupKey]: new test_uses_match_dedup_key.Adapter(),
     [domain.Kind.TestUsesTriggerState]: new test_uses_trigger_state.Adapter(),
+    [domain.Kind.MorphoAave3EthHealthFactor]: new morpho_aave3_eth_health_factor.Adapter(),
+    [domain.Kind.MorphoAave2HealthFactor]: new morpho_aave2_health_factor.Adapter(),
+    [domain.Kind.MorphoCompoundHealthFactor]: new morpho_compound_health_factor.Adapter(),
 };
